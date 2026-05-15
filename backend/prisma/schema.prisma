@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  name      String?
+  slug      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  endpoints Endpoint[]
+}
+
+model Endpoint {
+  id                   String        @id @default(uuid())
+  userId               String
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                 String
+  url                  String
+  method               String        @default("GET")
+  headers              Json?
+  body                 Json?
+  expectedStatus       Int[]
+  expectedBodyContains String?
+  interval             Int
+  timeout              Int           @default(10000)
+  isActive             Boolean       @default(true)
+  currentStatus        String?       // UP, DOWN, DEGRADED
+  lastCheckedAt        DateTime?
+  sslExpiresAt         DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  healthChecks         HealthCheck[]
+  alerts               Alert[]
+  alertRules           AlertRule[]
+  incidents            Incident[]
+
+  @@index([userId])
+}
+
+model HealthCheck {
+  id           String   @id @default(uuid())
+  endpointId   String
+  endpoint     Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  statusCode   Int?
+  latency      Float
+  isUp         Boolean
+  responseBody String?
+  errorMessage String?
+  checkedAt    DateTime @default(now())
+
+  @@index([endpointId, checkedAt])
+}
+
+model Alert {
+  id         String   @id @default(uuid())
+  endpointId String
+  endpoint   Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  type       String   // DOWN, UP_AGAIN, HIGH_LATENCY, SSL_EXPIRING
+  channel    String   // DISCORD, TELEGRAM, EMAIL
+  message    String
+  sent       Boolean  @default(false)
+  sentAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([endpointId])
+}
+
+model AlertRule {
+  id         String   @id @default(uuid())
+  endpointId String
+  endpoint   Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  name       String
+  condition  String
+  threshold  Int      @default(1)
+  cooldown   Int      @default(5)
+  channels   String[]
+  isActive   Boolean  @default(true)
+
+  @@index([endpointId])
+}
+
+model Incident {
+  id           String    @id @default(uuid())
+  endpointId   String
+  endpoint     Endpoint  @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  startedAt    DateTime  @default(now())
+  resolvedAt   DateTime?
+  errorCode    Int?
+  errorMessage String?
+  duration     Int?
+
+  @@index([endpointId])
+}
