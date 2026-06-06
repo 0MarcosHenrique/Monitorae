@@ -1,5 +1,7 @@
 import { EndpointForm } from '@/components/EndpointForm'
 import { EndpointActions } from '@/components/EndpointActions'
+import { RunCheckButton } from '@/components/RunCheckButton'
+import Link from 'next/link'
 
 type HealthCheck = {
   statusCode: number | null
@@ -171,9 +173,9 @@ export default async function Home() {
                     return (
                       <tr key={endpoint.id}>
                         <td>
-                          <span className="endpoint-name">
+                          <Link className="endpoint-name" href={`/endpoints/${endpoint.id}`}>
                             {endpoint.method} {endpoint.name}
-                          </span>
+                          </Link>
                           <span className="endpoint-url">{endpoint.url}</span>
                         </td>
                         <td>
@@ -184,7 +186,10 @@ export default async function Home() {
                         <td>{endpoint.interval}s</td>
                         <td>{formatDate(endpoint.lastCheckedAt)}</td>
                         <td>
-                          <EndpointActions endpointId={endpoint.id} endpointName={endpoint.name} />
+                          <div className="row-actions stacked">
+                            <RunCheckButton endpointId={endpoint.id} />
+                            <EndpointActions endpointId={endpoint.id} endpointName={endpoint.name} />
+                          </div>
                         </td>
                       </tr>
                     )
