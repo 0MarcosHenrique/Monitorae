@@ -1,21 +1,20 @@
-import { healthCheckQueue, HealthCheckJob } from './healthCheckQueue'
+import { Endpoint } from '@prisma/client'
 import { prisma } from '../lib/prisma'
+import { HealthCheckJob, healthCheckQueue } from './healthCheckQueue'
 
-// Busca e adiciona os jobs para todos os endpoints ativos no BD
 export const scheduleHealthChecks = async () => {
   const endpoints = await prisma.endpoint.findMany({
-    where: { isActive: true }
+    where: { isActive: true },
   })
 
-  console.log(`\x1b[36m[SCHEDULER]\x1b[0m Inicializando ${endpoints.length} jobs repetíveis...`)
+  console.log(`[SCHEDULER] Scheduling ${endpoints.length} active endpoint jobs...`)
 
-  for (const ep of endpoints) {
-    await addEndpointJob(ep)
+  for (const endpoint of endpoints) {
+    await addEndpointJob(endpoint)
   }
 }
 
-// Adiciona e gerencia um Job repetível para o respectivo endpoint
-export const addEndpointJob = async (endpoint: any) => {
+export const addEndpointJob = async (endpoint: Endpoint) => {
   const jobId = `health-check-${endpoint.id}`
   const jobData: HealthCheckJob = {
     endpointId: endpoint.id,
@@ -28,26 +27,27 @@ export const addEndpointJob = async (endpoint: any) => {
     expectedBodyContains: endpoint.expectedBodyContains || undefined,
   }
 
-  // Importante limpar se já houver um job de repetição pré-existente (por exemplo, após alterar o intervalo num PUT)
   await removeEndpointJob(endpoint.id)
 
   await healthCheckQueue.add('check', jobData, {
-    jobId, // Usado para identificar o job caso precisemos interagir posteriormente
+    jobId,
     repeat: {
-      every: endpoint.interval * 1000 // Multiplicando por 1000 pois BullMQ usa ms e o DB salva em segundos
-    }
+      every: endpoint.interval * 1000,
+    },
   })
+
+  console.log(`[SCHEDULER] Job scheduled for endpoint ${endpoint.id}`)
 }
 
-// Remove o Job de um endpoint específico. Usado em Soft Deletes ou desativações.
 export const removeEndpointJob = async (endpointId: string) => {
   const jobId = `health-check-${endpointId}`
   const repeatableJobs = await healthCheckQueue.getRepeatableJobs()
-  
-  const jobToRemove = repeatableJobs.find(job => job.id === jobId)
-  
-  if (jobToRemove) {
-    await healthCheckQueue.removeRepeatableByKey(jobToRemove.key)
-    console.log(`\x1b[33m[SCHEDULER]\x1b[0m Job repetível desativado para: ${endpointId}`)
+  const jobToRemove = repeatableJobs.find((job) => job.id === jobId)
+
+  if (!jobToRemove) {
+    return
   }
+
+  await healthCheckQueue.removeRepeatableByKey(jobToRemove.key)
+  console.log(`[SCHEDULER] Job removed for endpoint ${endpointId}`)
 }

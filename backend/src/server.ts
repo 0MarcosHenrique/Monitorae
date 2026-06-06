@@ -1,27 +1,25 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import { endpointRoutes } from './routes/endpoints'
-import './workers/healthCheckProcessor' // Inicializa o worker em background
+import './workers/healthCheckProcessor'
 import { scheduleHealthChecks } from './workers/scheduler'
+
 const server = Fastify({
   logger: true,
 })
 
-// Configurar o CORS para permitir requisições do frontend
 server.register(cors, {
   origin: 'http://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 })
 
-// Registrar as rotas de endpoints
 server.register(endpointRoutes, { prefix: '/api/endpoints' })
 
 const start = async () => {
   try {
     await server.listen({ port: 3001, host: '0.0.0.0' })
-    console.log(`🚀 Server is running on http://localhost:3001`)
-    
-    // Inicializa o agendamento dos endpoints ativos no BD
+    console.log('Server is running on http://localhost:3001')
+
     await scheduleHealthChecks()
   } catch (err) {
     server.log.error(err)
@@ -29,7 +27,6 @@ const start = async () => {
   }
 }
 
-// Graceful shutdown
 const listeners = ['SIGINT', 'SIGTERM']
 listeners.forEach((signal) => {
   process.on(signal, async () => {

@@ -1,9 +1,14 @@
 import { Queue } from 'bullmq'
-import Redis from 'ioredis'
 
-// URL de conexão usando o environment REDIS_URL
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
-const connection = new Redis(redisUrl, { maxRetriesPerRequest: null })
+const redisUrl = new URL(process.env.REDIS_URL || 'redis://localhost:6379')
+
+export const redisConnection = {
+  host: redisUrl.hostname,
+  port: Number(redisUrl.port || 6379),
+  username: redisUrl.username || undefined,
+  password: redisUrl.password || undefined,
+  maxRetriesPerRequest: null,
+}
 
 export interface HealthCheckJob {
   endpointId: string
@@ -16,14 +21,13 @@ export interface HealthCheckJob {
   expectedBodyContains?: string
 }
 
-// Configuração da fila BullMQ
-export const healthCheckQueue = new Queue<HealthCheckJob>('health-checks', {
-  connection,
+export const healthCheckQueue = new Queue<HealthCheckJob, void, 'check'>('health-checks', {
+  connection: redisConnection,
   defaultJobOptions: {
     attempts: 2,
     backoff: {
       type: 'fixed',
-      delay: 1000
-    }
-  }
+      delay: 1000,
+    },
+  },
 })

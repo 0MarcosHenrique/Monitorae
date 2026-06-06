@@ -1,11 +1,11 @@
 import { Worker, Job } from 'bullmq'
 import { prisma } from '../lib/prisma'
 import { runHealthCheck } from '../services/checker'
-import { HealthCheckJob } from './healthCheckQueue'
+import { HealthCheckJob, redisConnection } from './healthCheckQueue'
 import Redis from 'ioredis'
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
-const connection = new Redis(redisUrl, { maxRetriesPerRequest: null })
+const publisher = new Redis(redisUrl, { maxRetriesPerRequest: null })
 
 // Utilitário para formatar logs com cores ANSI no console
 const log = {
@@ -92,7 +92,7 @@ export const healthCheckWorker = new Worker<HealthCheckJob>('health-checks', asy
       })
 
       // Dispara evento pub/sub do redis para ser capturado pelos sockets conectados
-      connection.publish('endpoint-status-changed', JSON.stringify({
+      publisher.publish('endpoint-status-changed', JSON.stringify({
         endpointId: data.endpointId,
         status: newStatus,
       }))
@@ -134,7 +134,7 @@ export const healthCheckWorker = new Worker<HealthCheckJob>('health-checks', asy
         })
       }
 
-      connection.publish('endpoint-status-changed', JSON.stringify({
+      publisher.publish('endpoint-status-changed', JSON.stringify({
         endpointId: data.endpointId,
         status: newStatus,
       }))
@@ -148,4 +148,4 @@ export const healthCheckWorker = new Worker<HealthCheckJob>('health-checks', asy
     log.error(`${data.url} -> [${result.statusCode || 'FALHA'}] ${result.errorMessage}`)
   }
 
-}, { connection })
+}, { connection: redisConnection })

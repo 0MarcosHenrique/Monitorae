@@ -1,46 +1,83 @@
-# Monitoraê - Infraestrutura Real-time Monitor
+# Monitorae - Real-time API Monitor
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Deploy Status](https://img.shields.io/badge/deploy-success-success)
+Monitorae is a full-stack monitoring project for tracking API health, latency, status changes, alerts and incidents.
 
-Bem-vindo ao **Monitoraê**, um sistema completo e em tempo real para monitoramento de APIs.
+The goal is to provide a practical dashboard where users can register endpoints, run scheduled health checks and inspect the latest availability history.
 
-## 🚀 Como começar
+## Features
 
-### Pré-requisitos
-- [Docker](https://www.docker.com/) e [Docker Compose](https://docs.docker.com/compose/)
-- [Node.js](https://nodejs.org/) (versão 20 recomendada)
+- Register API endpoints with method, timeout, interval and expected status codes.
+- Run scheduled checks with Redis and BullMQ.
+- Store health check history in PostgreSQL with Prisma.
+- Detect status changes and create alerts/incidents.
+- Provide a Next.js dashboard for endpoint status overview.
+- Docker Compose setup for local development.
 
-### Instalação
+## Tech Stack
 
-1. Clone o repositório:
-```bash
-git clone https://github.com/0MarcosHenrique/Monitorae.git
-cd Monitorae
-```
+### Frontend
 
-2. Inicie os containers com Docker Compose:
+- Next.js 14
+- React
+- TypeScript
+- Tailwind CSS
+
+### Backend
+
+- Node.js 20
+- Fastify
+- PostgreSQL
+- Prisma ORM
+- Redis
+- BullMQ
+- TypeScript
+
+## Getting Started
+
+### Requirements
+
+- Docker and Docker Compose
+- Node.js 20, if running services outside Docker
+
+### Run With Docker
+
 ```bash
 docker compose up -d
 ```
 
-3. Acesse a aplicação no seu navegador:
-- Frontend: [http://localhost:3000](http://localhost:3000)
-- Backend (API): [http://localhost:3001](http://localhost:3001)
+Then open:
 
-## 🛠️ Tech Stack
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:3001
 
-### Frontend
-- ⚛️ **Next.js 14** & **React**
-- 🎨 **Tailwind CSS**
-- 📊 **Tremor** & **Recharts** (Dashboards)
-- 🔌 **Socket.io-client** (Real-time)
-- 🟦 **TypeScript**
+### Useful Backend Commands
 
-### Backend
-- ⚡ **Node.js 20** & **Fastify**
-- 🗄️ **PostgreSQL** & **Prisma ORM**
-- 🔴 **Redis** & **BullMQ** (Filas e Background Jobs)
-- 🔄 **WebSockets** (@fastify/websocket)
-- 🟦 **TypeScript**
+```bash
+cd backend
+npm install
+npm run prisma:generate
+npm run prisma:migrate
+npm run dev
+```
+
+### Useful Frontend Commands
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## API Routes
+
+Base URL: `http://localhost:3001/api/endpoints`
+
+- `GET /` - list active endpoints
+- `GET /:id` - get one endpoint with recent checks
+- `POST /` - create an endpoint and schedule checks
+- `PUT /:id` - update an endpoint and reschedule checks
+- `DELETE /:id` - soft-delete an endpoint and remove its scheduled job
+
+## Project Status
+
+This is an MVP intended for portfolio development. The backend monitoring flow is the strongest part today; the dashboard is intentionally minimal and can evolve with charts, auth, alert channels and real-time updates.
