@@ -45,10 +45,13 @@ The goal is to provide a practical dashboard where users can register endpoints,
 docker compose up -d
 ```
 
+The backend container runs Prisma generate and applies pending migrations before starting the API.
+
 Then open:
 
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:3001
+- Backend health: http://localhost:3001/health
 
 ### Useful Backend Commands
 
@@ -57,6 +60,7 @@ cd backend
 npm install
 npm run prisma:generate
 npm run prisma:migrate
+npm run prisma:seed
 npm run dev
 ```
 
@@ -74,9 +78,24 @@ Base URL: `http://localhost:3001/api/endpoints`
 
 - `GET /` - list active endpoints
 - `GET /:id` - get one endpoint with recent checks
-- `POST /` - create an endpoint and schedule checks
+- `POST /` - create an endpoint and schedule checks. If `userId` is omitted, the API uses a demo user.
 - `PUT /:id` - update an endpoint and reschedule checks
 - `DELETE /:id` - soft-delete an endpoint and remove its scheduled job
+
+Health check:
+
+- `GET /health` - check whether the backend process is running
+
+## Dashboard Flow
+
+Open `http://localhost:3000`, add an endpoint from the form and wait for scheduled checks to update the status table.
+
+The dashboard currently shows:
+
+- total monitored endpoints;
+- current UP/DOWN/PENDING count;
+- average latency from the latest checks;
+- endpoint list with status, last status code, latency, interval and last check time.
 
 ## Project Status
 

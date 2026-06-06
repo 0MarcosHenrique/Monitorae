@@ -13,6 +13,14 @@ server.register(cors, {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 })
 
+server.get('/health', async () => {
+  return {
+    status: 'ok',
+    service: 'monitorae-backend',
+    timestamp: new Date().toISOString(),
+  }
+})
+
 server.register(endpointRoutes, { prefix: '/api/endpoints' })
 
 const start = async () => {

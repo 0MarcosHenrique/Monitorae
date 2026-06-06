@@ -1,3 +1,5 @@
+import { EndpointForm } from '@/components/EndpointForm'
+
 type HealthCheck = {
   statusCode: number | null
   latency: number
@@ -124,6 +126,16 @@ export default async function Home() {
             <span>Avg latency</span>
             <strong>{averageLatency}ms</strong>
           </div>
+        </div>
+
+        <div className="panel">
+          <div className="panel-header">
+            <div>
+              <h2>Add endpoint</h2>
+              <p>Create a monitor and schedule its first checks automatically</p>
+            </div>
+          </div>
+          <EndpointForm />
         </div>
 
         <div className="panel">
