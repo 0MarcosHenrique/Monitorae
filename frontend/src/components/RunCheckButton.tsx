@@ -23,6 +23,10 @@ export function RunCheckButton({ endpointId }: RunCheckButtonProps) {
       try {
         const response = await fetch(`${apiBaseUrl}/api/endpoints/${endpointId}/check`, {
           method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
         })
         const body = await response.json()
 

@@ -41,6 +41,18 @@ services:
       - DATABASE_URL=postgresql://admin:admin123@postgres:5432/monitorae
       - REDIS_URL=redis://redis:6379
       - PORT=3001
+      - AUTH_TOKEN_SECRET=${AUTH_TOKEN_SECRET:-monitorae-dev-secret}
+      - AUTH_TOKEN_TTL_SECONDS=${AUTH_TOKEN_TTL_SECONDS:-604800}
+      - ALERT_CHANNELS=${ALERT_CHANNELS:-}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - ALERT_EMAIL_FROM=${ALERT_EMAIL_FROM:-}
+      - ALERT_EMAIL_TO=${ALERT_EMAIL_TO:-}
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules

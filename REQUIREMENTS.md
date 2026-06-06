@@ -30,6 +30,18 @@ Backend:
 DATABASE_URL=postgresql://admin:admin123@localhost:5432/monitorae
 REDIS_URL=redis://localhost:6379
 PORT=3001
+AUTH_TOKEN_SECRET=change-me-in-production
+AUTH_TOKEN_TTL_SECONDS=604800
+ALERT_CHANNELS=DISCORD,TELEGRAM,EMAIL
+DISCORD_WEBHOOK_URL=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+ALERT_EMAIL_FROM=
+ALERT_EMAIL_TO=
 ```
 
 Frontend:
@@ -55,6 +67,7 @@ curl http://localhost:3001/health
 ```bash
 cd backend
 npm run build
+npm test
 npm audit --omit=dev
 ```
 

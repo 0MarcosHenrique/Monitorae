@@ -11,6 +11,10 @@ The goal is to provide a practical dashboard where users can register endpoints,
 - Store health check history in PostgreSQL with Prisma.
 - Detect status changes and create alerts/incidents.
 - Provide a Next.js dashboard for endpoint status overview.
+- Run manual checks from the dashboard.
+- Inspect endpoint details with latency history, alerts and incidents.
+- Send configurable alerts through Discord, Telegram or SMTP email.
+- Register/login users with bearer-token authentication.
 - Docker Compose setup for local development.
 
 ## Tech Stack
@@ -77,11 +81,18 @@ npm run dev
 
 ## API Routes
 
+Auth base URL: `http://localhost:3001/api/auth`
+
+- `POST /register` - create a user and return an auth token
+- `POST /login` - authenticate and return an auth token
+- `GET /me` - return the current user from `Authorization: Bearer <token>`
+
 Base URL: `http://localhost:3001/api/endpoints`
 
 - `GET /` - list active endpoints
 - `GET /:id` - get one endpoint with recent checks
 - `POST /` - create an endpoint and schedule checks. If `userId` is omitted, the API uses a demo user.
+- `POST /:id/check` - run an immediate health check
 - `PUT /:id` - update an endpoint and reschedule checks
 - `DELETE /:id` - soft-delete an endpoint and remove its scheduled job
 
@@ -99,7 +110,9 @@ The dashboard currently shows:
 - current UP/DOWN/PENDING count;
 - average latency from the latest checks;
 - endpoint list with status, last status code, latency, interval and last check time;
-- endpoint removal from the dashboard.
+- endpoint removal from the dashboard;
+- manual check execution;
+- endpoint detail pages with latency history, recent checks, alerts and incidents.
 
 ## Project Status
 

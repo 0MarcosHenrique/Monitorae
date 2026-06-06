@@ -1,6 +1,7 @@
-import { FastifyInstance, FastifyReply } from 'fastify'
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { prisma } from '../lib/prisma'
 import { processEndpointHealthCheck } from '../services/healthCheckRunner'
+import { verifyAuthToken } from '../services/auth'
 import { addEndpointJob, removeEndpointJob } from '../workers/scheduler'
 import {
   createEndpointSchema,
@@ -41,6 +42,18 @@ const getDemoUserId = async () => {
   return user.id
 }
 
+const getAuthenticatedUserId = (request: FastifyRequest) => {
+  const authorization = request.headers.authorization
+
+  if (!authorization?.startsWith('Bearer ')) {
+    return null
+  }
+
+  const payload = verifyAuthToken(authorization.slice('Bearer '.length))
+
+  return payload?.userId || null
+}
+
 export const endpointRoutes = async (fastify: FastifyInstance) => {
   fastify.get('/', async (request, reply) => {
     try {
@@ -51,10 +64,11 @@ export const endpointRoutes = async (fastify: FastifyInstance) => {
       }
 
       const { userId } = result.data
+      const authenticatedUserId = getAuthenticatedUserId(request)
 
       const endpoints = await prisma.endpoint.findMany({
         where: {
-          userId: userId || undefined,
+          userId: authenticatedUserId || userId || undefined,
           isActive: true,
         },
         orderBy: {
@@ -115,6 +129,12 @@ export const endpointRoutes = async (fastify: FastifyInstance) => {
         return sendError(reply, 'Endpoint not found', 404)
       }
 
+      const authenticatedUserId = getAuthenticatedUserId(request)
+
+      if (authenticatedUserId && endpoint.userId !== authenticatedUserId) {
+        return sendError(reply, 'Endpoint not found', 404)
+      }
+
       return sendSuccess(reply, endpoint)
     } catch (err) {
       fastify.log.error(err)
@@ -135,6 +155,12 @@ export const endpointRoutes = async (fastify: FastifyInstance) => {
       })
 
       if (!endpoint || !endpoint.isActive) {
+        return sendError(reply, 'Endpoint not found', 404)
+      }
+
+      const authenticatedUserId = getAuthenticatedUserId(request)
+
+      if (authenticatedUserId && endpoint.userId !== authenticatedUserId) {
         return sendError(reply, 'Endpoint not found', 404)
       }
 
@@ -159,7 +185,8 @@ export const endpointRoutes = async (fastify: FastifyInstance) => {
         return sendError(reply, result.error.format(), 400)
       }
 
-      const userId = result.data.userId || await getDemoUserId()
+      const authenticatedUserId = getAuthenticatedUserId(request)
+      const userId = authenticatedUserId || result.data.userId || await getDemoUserId()
       const endpoint = await prisma.endpoint.create({
         data: {
           ...result.data,
@@ -198,6 +225,12 @@ export const endpointRoutes = async (fastify: FastifyInstance) => {
         return sendError(reply, 'Endpoint not found', 404)
       }
 
+      const authenticatedUserId = getAuthenticatedUserId(request)
+
+      if (authenticatedUserId && existing.userId !== authenticatedUserId) {
+        return sendError(reply, 'Endpoint not found', 404)
+      }
+
       const updatedEndpoint = await prisma.endpoint.update({
         where: { id },
         data: bodyResult.data,
@@ -227,6 +260,12 @@ export const endpointRoutes = async (fastify: FastifyInstance) => {
       })
 
       if (!existing || !existing.isActive) {
+        return sendError(reply, 'Endpoint not found', 404)
+      }
+
+      const authenticatedUserId = getAuthenticatedUserId(request)
+
+      if (authenticatedUserId && existing.userId !== authenticatedUserId) {
         return sendError(reply, 'Endpoint not found', 404)
       }
 

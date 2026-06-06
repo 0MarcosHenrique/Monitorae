@@ -1,5 +1,6 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
+import { authRoutes } from './routes/auth'
 import { endpointRoutes } from './routes/endpoints'
 import './workers/healthCheckProcessor'
 import { scheduleHealthChecks } from './workers/scheduler'
@@ -21,6 +22,7 @@ server.get('/health', async () => {
   }
 })
 
+server.register(authRoutes, { prefix: '/api/auth' })
 server.register(endpointRoutes, { prefix: '/api/endpoints' })
 
 const start = async () => {

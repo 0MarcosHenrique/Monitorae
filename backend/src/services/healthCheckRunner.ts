@@ -1,4 +1,3 @@
-import { Endpoint } from '@prisma/client'
 import Redis from 'ioredis'
 import { prisma } from '../lib/prisma'
 import { runHealthCheck } from './checker'
@@ -7,17 +6,16 @@ import { createAndDispatchAlerts } from './alertNotifier'
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
 const publisher = new Redis(redisUrl, { maxRetriesPerRequest: null })
 
-type HealthCheckEndpoint = Pick<
-  Endpoint,
-  | 'id'
-  | 'url'
-  | 'method'
-  | 'headers'
-  | 'body'
-  | 'expectedStatus'
-  | 'timeout'
-  | 'expectedBodyContains'
->
+type HealthCheckEndpoint = {
+  id: string
+  url: string
+  method: string
+  headers?: unknown
+  body?: unknown
+  expectedStatus: number[]
+  timeout: number
+  expectedBodyContains?: string | null
+}
 
 const publishStatusChange = async (endpointId: string, status: string) => {
   await publisher.publish('endpoint-status-changed', JSON.stringify({
