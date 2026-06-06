@@ -266,6 +266,40 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+.row-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.row-actions span {
+  color: #b91c1c;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.danger-button {
+  background: #ffffff;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #b91c1c;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.danger-button:hover {
+  background: #fef2f2;
+}
+
+.danger-button:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
 .badge {
   border-radius: 999px;
   display: inline-flex;

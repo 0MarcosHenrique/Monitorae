@@ -1,4 +1,5 @@
 import { EndpointForm } from '@/components/EndpointForm'
+import { EndpointActions } from '@/components/EndpointActions'
 
 type HealthCheck = {
   statusCode: number | null
@@ -159,6 +160,7 @@ export default async function Home() {
                     <th>Latency</th>
                     <th>Interval</th>
                     <th>Last check</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -181,6 +183,9 @@ export default async function Home() {
                         <td>{latestCheck ? `${Math.round(latestCheck.latency)}ms` : '-'}</td>
                         <td>{endpoint.interval}s</td>
                         <td>{formatDate(endpoint.lastCheckedAt)}</td>
+                        <td>
+                          <EndpointActions endpointId={endpoint.id} endpointName={endpoint.name} />
+                        </td>
                       </tr>
                     )
                   })}

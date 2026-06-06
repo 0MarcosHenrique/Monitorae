@@ -17,10 +17,10 @@ The goal is to provide a practical dashboard where users can register endpoints,
 
 ### Frontend
 
-- Next.js 14
-- React
+- Next.js 16
+- React 19
 - TypeScript
-- Tailwind CSS
+- CSS
 
 ### Backend
 
@@ -38,6 +38,8 @@ The goal is to provide a practical dashboard where users can register endpoints,
 
 - Docker and Docker Compose
 - Node.js 20, if running services outside Docker
+
+See [REQUIREMENTS.md](./REQUIREMENTS.md) for local ports, environment variables and verification commands.
 
 ### Run With Docker
 
@@ -69,6 +71,7 @@ npm run dev
 ```bash
 cd frontend
 npm install
+npm run typecheck
 npm run dev
 ```
 
@@ -95,7 +98,8 @@ The dashboard currently shows:
 - total monitored endpoints;
 - current UP/DOWN/PENDING count;
 - average latency from the latest checks;
-- endpoint list with status, last status code, latency, interval and last check time.
+- endpoint list with status, last status code, latency, interval and last check time;
+- endpoint removal from the dashboard.
 
 ## Project Status
 
