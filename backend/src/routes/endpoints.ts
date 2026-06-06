@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyReply } from 'fastify'
 import { prisma } from '../lib/prisma'
+import { processEndpointHealthCheck } from '../services/healthCheckRunner'
 import { addEndpointJob, removeEndpointJob } from '../workers/scheduler'
 import {
   createEndpointSchema,
@@ -93,6 +94,18 @@ export const endpointRoutes = async (fastify: FastifyInstance) => {
             orderBy: {
               checkedAt: 'desc',
             },
+            take: 30,
+          },
+          alerts: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 20,
+          },
+          incidents: {
+            orderBy: {
+              startedAt: 'desc',
+            },
             take: 10,
           },
         },
@@ -103,6 +116,35 @@ export const endpointRoutes = async (fastify: FastifyInstance) => {
       }
 
       return sendSuccess(reply, endpoint)
+    } catch (err) {
+      fastify.log.error(err)
+      return sendError(reply, 'Internal Server Error', 500)
+    }
+  })
+
+  fastify.post('/:id/check', async (request, reply) => {
+    try {
+      const result = endpointIdParamsSchema.safeParse(request.params)
+
+      if (!result.success) {
+        return sendError(reply, 'Invalid ID format', 400)
+      }
+
+      const endpoint = await prisma.endpoint.findUnique({
+        where: { id: result.data.id },
+      })
+
+      if (!endpoint || !endpoint.isActive) {
+        return sendError(reply, 'Endpoint not found', 404)
+      }
+
+      const processed = await processEndpointHealthCheck(endpoint)
+
+      if (!processed) {
+        return sendError(reply, 'Endpoint not found', 404)
+      }
+
+      return sendSuccess(reply, processed, 201)
     } catch (err) {
       fastify.log.error(err)
       return sendError(reply, 'Internal Server Error', 500)
