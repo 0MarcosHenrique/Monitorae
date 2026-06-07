@@ -1,9 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { AuthPanel } from '@/components/AuthPanel'
 import { EndpointActions } from '@/components/EndpointActions'
+import { EndpointEditForm } from '@/components/EndpointEditForm'
 import { EndpointForm } from '@/components/EndpointForm'
 import { RunCheckButton } from '@/components/RunCheckButton'
 import { authChangedEvent, endpointsChangedEvent, getAuthHeaders, getAuthToken } from '@/lib/authToken'
@@ -20,6 +21,8 @@ export type Endpoint = {
   name: string
   url: string
   method: string
+  expectedStatus: number[]
+  expectedBodyContains: string | null
   interval: number
   timeout: number
   currentStatus: 'UP' | 'DOWN' | 'DEGRADED' | null
@@ -61,6 +64,7 @@ export function DashboardClient({ initialEndpoints, initialError }: DashboardCli
   const [endpoints, setEndpoints] = useState(initialEndpoints)
   const [error, setError] = useState(initialError)
   const [isAuthenticatedView, setIsAuthenticatedView] = useState(false)
+  const [editingEndpointId, setEditingEndpointId] = useState<string | null>(null)
 
   const loadEndpoints = useCallback(async () => {
     const token = getAuthToken()
@@ -203,27 +207,50 @@ export function DashboardClient({ initialEndpoints, initialError }: DashboardCli
                     const status = endpoint.currentStatus?.toLowerCase() || 'pending'
 
                     return (
-                      <tr key={endpoint.id}>
-                        <td>
-                          <Link className="endpoint-name" href={`/endpoints/${endpoint.id}`}>
-                            {endpoint.method} {endpoint.name}
-                          </Link>
-                          <span className="endpoint-url">{endpoint.url}</span>
-                        </td>
-                        <td>
-                          <span className={`badge ${status}`}>{endpoint.currentStatus || 'PENDING'}</span>
-                        </td>
-                        <td>{latestCheck?.statusCode || '-'}</td>
-                        <td>{latestCheck ? `${Math.round(latestCheck.latency)}ms` : '-'}</td>
-                        <td>{endpoint.interval}s</td>
-                        <td>{formatDate(endpoint.lastCheckedAt)}</td>
-                        <td>
-                          <div className="row-actions stacked">
-                            <RunCheckButton endpointId={endpoint.id} />
-                            <EndpointActions endpointId={endpoint.id} endpointName={endpoint.name} />
-                          </div>
-                        </td>
-                      </tr>
+                      <Fragment key={endpoint.id}>
+                        <tr key={endpoint.id}>
+                          <td>
+                            <Link className="endpoint-name" href={`/endpoints/${endpoint.id}`}>
+                              {endpoint.method} {endpoint.name}
+                            </Link>
+                            <span className="endpoint-url">{endpoint.url}</span>
+                          </td>
+                          <td>
+                            <span className={`badge ${status}`}>{endpoint.currentStatus || 'PENDING'}</span>
+                          </td>
+                          <td>{latestCheck?.statusCode || '-'}</td>
+                          <td>{latestCheck ? `${Math.round(latestCheck.latency)}ms` : '-'}</td>
+                          <td>{endpoint.interval}s</td>
+                          <td>{formatDate(endpoint.lastCheckedAt)}</td>
+                          <td>
+                            <div className="row-actions stacked">
+                              <RunCheckButton endpointId={endpoint.id} />
+                              <button
+                                className="secondary-button"
+                                onClick={() => setEditingEndpointId(endpoint.id)}
+                                type="button"
+                              >
+                                Edit
+                              </button>
+                              <EndpointActions endpointId={endpoint.id} endpointName={endpoint.name} />
+                            </div>
+                          </td>
+                        </tr>
+                        {editingEndpointId === endpoint.id ? (
+                          <tr key={`${endpoint.id}-edit`}>
+                            <td colSpan={7}>
+                              <EndpointEditForm
+                                endpoint={endpoint}
+                                onCancel={() => setEditingEndpointId(null)}
+                                onSaved={() => {
+                                  setEditingEndpointId(null)
+                                  void loadEndpoints()
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
                     )
                   })}
                 </tbody>
