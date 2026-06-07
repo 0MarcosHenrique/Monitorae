@@ -2,7 +2,7 @@
 
 import { FormEvent, useState, useTransition } from 'react'
 import { emitEndpointsChanged, getAuthHeaders } from '@/lib/authToken'
-import { Endpoint } from '@/components/DashboardClient'
+import type { Endpoint } from '@/components/DashboardClient'
 
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -121,7 +121,11 @@ export function EndpointEditForm({ endpoint, onCancel, onSaved }: EndpointEditFo
 
         <label className="field-wide">
           <span>Body contains</span>
-          <input name="expectedBodyContains" placeholder="Optional response text" />
+          <input
+            name="expectedBodyContains"
+            placeholder="Optional response text"
+            defaultValue={endpoint.expectedBodyContains || ''}
+          />
         </label>
       </div>
 

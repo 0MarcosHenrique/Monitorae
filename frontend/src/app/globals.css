@@ -346,25 +346,37 @@ h1 {
   padding: 18px;
 }
 
+.edit-form {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin: 4px 0;
+  padding: 16px;
+}
+
 .form-grid {
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.endpoint-form label {
+.endpoint-form label,
+.edit-form label {
   display: grid;
   gap: 7px;
 }
 
-.endpoint-form label span {
+.endpoint-form label span,
+.edit-form label span {
   color: #52616f;
   font-size: 0.78rem;
   font-weight: 800;
 }
 
 .endpoint-form input,
-.endpoint-form select {
+.endpoint-form select,
+.edit-form input,
+.edit-form select {
   background: #ffffff;
   border: 1px solid #cfd8e3;
   border-radius: 8px;
@@ -377,7 +389,9 @@ h1 {
 }
 
 .endpoint-form input:focus,
-.endpoint-form select:focus {
+.endpoint-form select:focus,
+.edit-form input:focus,
+.edit-form select:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13);
 }
@@ -403,6 +417,12 @@ h1 {
   font-weight: 800;
   min-height: 42px;
   padding: 0 16px;
+}
+
+.form-footer .ghost-button {
+  background: #ffffff;
+  border: 1px solid #cfd8e3;
+  color: #405161;
 }
 
 .form-footer button:disabled {

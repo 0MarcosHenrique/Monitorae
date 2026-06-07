@@ -12,6 +12,7 @@ The goal is to provide a practical dashboard where users can register endpoints,
 - Detect status changes and create alerts/incidents.
 - Provide a Next.js dashboard for endpoint status overview.
 - Run manual checks from the dashboard.
+- Edit endpoint configuration from the dashboard.
 - Inspect endpoint details with latency history, alerts and incidents.
 - Send configurable alerts through Discord, Telegram or SMTP email.
 - Register/login users with bearer-token authentication.
@@ -111,6 +112,7 @@ The dashboard currently shows:
 - current UP/DOWN/PENDING count;
 - average latency from the latest checks;
 - endpoint list with status, last status code, latency, interval and last check time;
+- endpoint editing for URL, method, interval, timeout, expected status and expected response text;
 - endpoint removal from the dashboard;
 - manual check execution;
 - endpoint detail pages with latency history, recent checks, alerts and incidents.
@@ -118,4 +120,4 @@ The dashboard currently shows:
 
 ## Project Status
 
-This is an MVP intended for portfolio development. The backend monitoring flow is the strongest part today; the dashboard is intentionally minimal and can evolve with charts, auth, alert channels and real-time updates.
+This is an MVP intended for portfolio development. It already includes the core monitoring flow, auth, manual checks, endpoint details, configurable alerts and endpoint editing. Good next steps are UI polish, richer charts and real-time updates.
