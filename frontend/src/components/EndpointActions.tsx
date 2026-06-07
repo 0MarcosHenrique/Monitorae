@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { emitEndpointsChanged, getAuthHeaders } from '@/lib/authToken'
 
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -30,6 +31,7 @@ export function EndpointActions({ endpointId, endpointName }: EndpointActionsPro
       try {
         const response = await fetch(`${apiBaseUrl}/api/endpoints/${endpointId}`, {
           method: 'DELETE',
+          headers: getAuthHeaders(),
         })
         const body = await response.json()
 
@@ -38,6 +40,7 @@ export function EndpointActions({ endpointId, endpointName }: EndpointActionsPro
           return
         }
 
+        emitEndpointsChanged()
         router.refresh()
       } catch {
         setError('Could not remove')

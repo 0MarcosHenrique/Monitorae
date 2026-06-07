@@ -15,6 +15,7 @@ The goal is to provide a practical dashboard where users can register endpoints,
 - Inspect endpoint details with latency history, alerts and incidents.
 - Send configurable alerts through Discord, Telegram or SMTP email.
 - Register/login users with bearer-token authentication.
+- Use the dashboard account panel to login/register and send authenticated requests.
 - Docker Compose setup for local development.
 
 ## Tech Stack
@@ -113,6 +114,7 @@ The dashboard currently shows:
 - endpoint removal from the dashboard;
 - manual check execution;
 - endpoint detail pages with latency history, recent checks, alerts and incidents.
+- account panel for login/register using the auth API.
 
 ## Project Status
 

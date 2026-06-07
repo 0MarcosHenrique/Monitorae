@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { emitEndpointsChanged, getAuthHeaders } from '@/lib/authToken'
 
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -64,6 +65,7 @@ export function EndpointForm() {
         const response = await fetch(`${apiBaseUrl}/api/endpoints`, {
           method: 'POST',
           headers: {
+            ...getAuthHeaders(),
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
@@ -86,6 +88,7 @@ export function EndpointForm() {
           type: 'success',
           message: 'Endpoint created and scheduled.',
         })
+        emitEndpointsChanged()
         router.refresh()
       } catch (error) {
         setState({

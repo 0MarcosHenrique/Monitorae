@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { emitEndpointsChanged, getAuthHeaders } from '@/lib/authToken'
 
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -24,6 +25,7 @@ export function RunCheckButton({ endpointId }: RunCheckButtonProps) {
         const response = await fetch(`${apiBaseUrl}/api/endpoints/${endpointId}/check`, {
           method: 'POST',
           headers: {
+            ...getAuthHeaders(),
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({}),
@@ -35,6 +37,7 @@ export function RunCheckButton({ endpointId }: RunCheckButtonProps) {
           return
         }
 
+        emitEndpointsChanged()
         router.refresh()
       } catch {
         setError('Check failed')
