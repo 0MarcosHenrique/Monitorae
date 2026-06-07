@@ -7,6 +7,7 @@ import { EndpointActions } from '@/components/EndpointActions'
 import { EndpointEditForm } from '@/components/EndpointEditForm'
 import { EndpointForm } from '@/components/EndpointForm'
 import { RunCheckButton } from '@/components/RunCheckButton'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { authChangedEvent, endpointsChangedEvent, getAuthHeaders, getAuthToken } from '@/lib/authToken'
 
 export type HealthCheck = {
@@ -58,6 +59,36 @@ function formatDate(value: string | null) {
 
 function getLatestCheck(endpoint: Endpoint) {
   return endpoint.healthChecks[0]
+}
+
+function formatRelativeTime(value: string | null) {
+  if (!value) {
+    return 'Not checked yet'
+  }
+
+  const diffMs = Date.now() - new Date(value).getTime()
+  const diffMinutes = Math.max(1, Math.round(diffMs / 60000))
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min ago`
+  }
+
+  const diffHours = Math.round(diffMinutes / 60)
+
+  return `${diffHours} h ago`
+}
+
+function buildSparkline(endpoints: Endpoint[], fallback: number) {
+  const values = endpoints
+    .map((endpoint) => getLatestCheck(endpoint))
+    .filter((check): check is HealthCheck => Boolean(check))
+    .map((check) => check.latency)
+
+  const source = values.length > 0 ? values : [fallback || 1]
+  const max = Math.max(...source, 1)
+  const points = Array.from({ length: 12 }, (_, index) => source[index % source.length])
+
+  return points.map((value) => Math.max((value / max) * 100, 12))
 }
 
 export function DashboardClient({ initialEndpoints, initialError }: DashboardClientProps) {
@@ -115,11 +146,14 @@ export function DashboardClient({ initialEndpoints, initialError }: DashboardCli
 
   const summary = useMemo(() => {
     const checks = endpoints.flatMap((endpoint) => endpoint.healthChecks)
+    const activeChecks = checks.filter((check) => check.isUp).length
+    const uptime = checks.length > 0 ? (activeChecks / checks.length) * 100 : 0
 
     return {
       upCount: endpoints.filter((endpoint) => endpoint.currentStatus === 'UP').length,
       downCount: endpoints.filter((endpoint) => endpoint.currentStatus === 'DOWN').length,
       pendingCount: endpoints.filter((endpoint) => !endpoint.currentStatus).length,
+      uptime,
       averageLatency:
         checks.length > 0
           ? Math.round(checks.reduce((sum, check) => sum + check.latency, 0) / checks.length)
@@ -127,138 +161,267 @@ export function DashboardClient({ initialEndpoints, initialError }: DashboardCli
     }
   }, [endpoints])
 
+  const responseSparkline = useMemo(() => buildSparkline(endpoints, summary.averageLatency), [endpoints, summary.averageLatency])
+  const uptimeSparkline = useMemo(() => {
+    const base = summary.uptime || 100
+
+    return Array.from({ length: 12 }, (_, index) => Math.max(Math.min(base - (index % 4) * 0.25, 100), 96))
+  }, [summary.uptime])
+  const recentActivity = endpoints
+    .filter((endpoint) => endpoint.lastCheckedAt)
+    .slice(0, 4)
+
   return (
-    <>
-      <header className="app-header">
-        <div>
-          <p className="eyebrow">API Monitoring</p>
-          <h1>Monitorae</h1>
-          <p className="subtitle">
-            Track endpoint availability, scheduled checks and recent latency from a focused operational dashboard.
-          </p>
+    <div className="app-frame">
+      <aside className="app-sidebar">
+        <Link className="brand-lockup" href="/">
+          <span className="brand-mark">M</span>
+          <strong>Monitorae</strong>
+        </Link>
+
+        <nav className="sidebar-nav" aria-label="Primary navigation">
+          <a className="active" href="#overview"><span>⌘</span>Overview</a>
+          <a href="#monitors"><span>◉</span>Endpoints</a>
+          <a href="#incidents"><span>◇</span>Incidents</a>
+          <a href="#activity"><span>↗</span>Alerts</a>
+          <a href="#new-monitor"><span>＋</span>New Monitor</a>
+        </nav>
+
+        <div className="sidebar-divider" />
+
+        <nav className="sidebar-nav secondary" aria-label="Secondary navigation">
+          <a href="#account"><span>◎</span>Account</a>
+          <a href="#monitors"><span>☷</span>Monitor list</a>
+        </nav>
+
+        <div className="plan-card">
+          <div>
+            <span>Plan</span>
+            <strong>Local</strong>
+          </div>
+          <div>
+            <span>Monitors</span>
+            <strong>{endpoints.length} / 20</strong>
+          </div>
         </div>
-        <div className="refresh-pill">
-          <span className={`status-dot ${error ? 'warn' : 'ok'}`} />
-          {error ? 'API unavailable' : isAuthenticatedView ? 'Account data' : 'Demo data'}
+      </aside>
+
+      <div className="app-content">
+        <header className="topbar">
+          <div>
+            <h1>Overview</h1>
+            <p>Real-time overview of your API monitors and system health.</p>
+          </div>
+          <div className="topbar-actions">
+            <ThemeToggle />
+            <a className="primary-button" href="#new-monitor">+ New Monitor</a>
+          </div>
+        </header>
+
+        <div id="account">
+          <AuthPanel />
         </div>
-      </header>
 
-      {error ? <div className="error-box">Backend connection issue: {error}</div> : null}
+        {error ? <div className="error-box">Backend connection issue: {error}</div> : null}
 
-      <section className="dashboard">
-        <AuthPanel />
+        <section className="dashboard" id="overview">
+          <div className="status-strip">
+            <span className={`status-dot ${error ? 'warn' : 'ok'}`} />
+            {error ? 'API unavailable' : isAuthenticatedView ? 'Account data' : 'Demo data'}
+          </div>
 
-        <div className="metric-grid" aria-label="Monitoring summary">
+          <div className="metric-grid" aria-label="Monitoring summary">
           <div className="metric">
-            <span>Total endpoints</span>
+            <span><i className="metric-icon green">✓</i>Active Monitors</span>
             <strong>{endpoints.length}</strong>
+            <small>{summary.upCount} online</small>
           </div>
           <div className="metric">
-            <span>Up</span>
-            <strong>{summary.upCount}</strong>
-          </div>
-          <div className="metric">
-            <span>Down</span>
-            <strong>{summary.downCount}</strong>
-          </div>
-          <div className="metric">
-            <span>Avg latency</span>
+            <span><i className="metric-icon violet">◷</i>Avg. Response Time</span>
             <strong>{summary.averageLatency}ms</strong>
+            <small>{summary.pendingCount} waiting checks</small>
+          </div>
+          <div className="metric" id="incidents">
+            <span><i className="metric-icon rose">!</i>Incidents</span>
+            <strong>{summary.downCount}</strong>
+            <small>{summary.downCount === 0 ? 'No incidents' : 'Needs attention'}</small>
+          </div>
+          <div className="metric">
+            <span><i className="metric-icon blue">↟</i>Uptime</span>
+            <strong>{summary.uptime.toFixed(2)}%</strong>
+            <small>from latest checks</small>
           </div>
         </div>
 
-        <div className="panel">
-          <div className="panel-header">
-            <div>
-              <h2>Add endpoint</h2>
-              <p>Create a monitor and schedule its first checks automatically</p>
+          <div className="overview-grid">
+            <div className="panel chart-panel">
+              <div className="panel-header">
+                <div>
+                  <h2>Uptime Overview</h2>
+                  <p>Current monitor health sample</p>
+                </div>
+                <span className="select-pill">30 days</span>
+              </div>
+              <div className="line-chart uptime-chart">
+                {uptimeSparkline.map((point, index) => (
+                  <span
+                    key={`uptime-${index}`}
+                    style={{ height: `${point}%` }}
+                    title={`${point.toFixed(2)}% uptime`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="panel chart-panel">
+              <div className="panel-header">
+                <div>
+                  <h2>Response Time</h2>
+                  <p>Latest endpoint response sample</p>
+                </div>
+                <strong className="chart-value">{summary.averageLatency}ms</strong>
+              </div>
+              <div className="line-chart response-chart">
+                {responseSparkline.map((point, index) => (
+                  <span key={`response-${index}`} style={{ height: `${point}%` }} title={`${Math.round(point)}%`} />
+                ))}
+              </div>
             </div>
           </div>
-          <EndpointForm />
-        </div>
 
-        <div className="panel">
-          <div className="panel-header">
-            <div>
-              <h2>Endpoints</h2>
-              <p>{summary.pendingCount} waiting for the first check</p>
+          <div className="content-grid">
+            <div className="panel" id="monitors">
+              <div className="panel-header">
+                <div>
+                  <h2>Monitors</h2>
+                  <p>{summary.pendingCount} waiting for the first check</p>
+                </div>
+              </div>
+
+              {endpoints.length === 0 ? (
+                <div className="empty-state">No active endpoints found.</div>
+              ) : (
+                <div className="table-scroll">
+                  <table className="endpoint-table">
+                    <thead>
+                      <tr>
+                        <th>Monitor</th>
+                        <th>Status</th>
+                        <th>Response Time</th>
+                        <th>Uptime</th>
+                        <th>Last Check</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {endpoints.map((endpoint) => {
+                        const latestCheck = getLatestCheck(endpoint)
+                        const status = endpoint.currentStatus?.toLowerCase() || 'pending'
+
+                        return (
+                          <Fragment key={endpoint.id}>
+                            <tr key={endpoint.id}>
+                              <td>
+                                <Link className="endpoint-name" href={`/endpoints/${endpoint.id}`}>
+                                  <span className="endpoint-avatar">{endpoint.name.slice(0, 1).toUpperCase()}</span>
+                                  <span>
+                                    {endpoint.name}
+                                    <small>{endpoint.url}</small>
+                                  </span>
+                                </Link>
+                              </td>
+                              <td>
+                                <span className={`badge ${status}`}>{endpoint.currentStatus || 'PENDING'}</span>
+                              </td>
+                              <td>{latestCheck ? `${Math.round(latestCheck.latency)}ms` : '-'}</td>
+                              <td>
+                                <div className="uptime-cell">
+                                  <span>{latestCheck?.isUp ? '100%' : '0%'}</span>
+                                  <i className={latestCheck?.isUp ? 'up' : 'down'} />
+                                </div>
+                              </td>
+                              <td>{formatRelativeTime(endpoint.lastCheckedAt)}</td>
+                              <td>
+                                <div className="row-actions">
+                                  <Link className="secondary-button" href={`/endpoints/${endpoint.id}`}>
+                                    View
+                                  </Link>
+                                  <RunCheckButton endpointId={endpoint.id} />
+                                  <button
+                                    className="secondary-button"
+                                    onClick={() => setEditingEndpointId(endpoint.id)}
+                                    type="button"
+                                  >
+                                    Edit
+                                  </button>
+                                  <EndpointActions endpointId={endpoint.id} endpointName={endpoint.name} />
+                                </div>
+                              </td>
+                            </tr>
+                            {editingEndpointId === endpoint.id ? (
+                              <tr key={`${endpoint.id}-edit`}>
+                                <td colSpan={6}>
+                                  <EndpointEditForm
+                                    endpoint={endpoint}
+                                    onCancel={() => setEditingEndpointId(null)}
+                                    onSaved={() => {
+                                      setEditingEndpointId(null)
+                                      void loadEndpoints()
+                                    }}
+                                  />
+                                </td>
+                              </tr>
+                            ) : null}
+                          </Fragment>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
+
+            <aside className="activity-panel panel" id="activity">
+              <div className="panel-header">
+                <div>
+                  <h2>Recent Activity</h2>
+                  <p>Latest monitor checks</p>
+                </div>
+              </div>
+              <div className="activity-list">
+                {recentActivity.length === 0 ? (
+                  <p>No activity yet.</p>
+                ) : recentActivity.map((endpoint) => {
+                  const latestCheck = getLatestCheck(endpoint)
+
+                  return (
+                    <Link className="activity-item" href={`/endpoints/${endpoint.id}`} key={endpoint.id}>
+                      <span className={latestCheck?.isUp ? 'activity-icon up' : 'activity-icon down'}>
+                        {latestCheck?.isUp ? '↑' : '↓'}
+                      </span>
+                      <span>
+                        <strong>{endpoint.name}</strong>
+                        <small>{latestCheck?.isUp ? 'Check successful' : 'Check failed'}</small>
+                      </span>
+                      <em>{formatRelativeTime(endpoint.lastCheckedAt)}</em>
+                    </Link>
+                  )
+                })}
+              </div>
+            </aside>
           </div>
 
-          {endpoints.length === 0 ? (
-            <div className="empty-state">No active endpoints found.</div>
-          ) : (
-            <div className="table-scroll">
-              <table className="endpoint-table">
-                <thead>
-                  <tr>
-                    <th>Endpoint</th>
-                    <th>Status</th>
-                    <th>Last status code</th>
-                    <th>Latency</th>
-                    <th>Interval</th>
-                    <th>Last check</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {endpoints.map((endpoint) => {
-                    const latestCheck = getLatestCheck(endpoint)
-                    const status = endpoint.currentStatus?.toLowerCase() || 'pending'
-
-                    return (
-                      <Fragment key={endpoint.id}>
-                        <tr key={endpoint.id}>
-                          <td>
-                            <Link className="endpoint-name" href={`/endpoints/${endpoint.id}`}>
-                              {endpoint.method} {endpoint.name}
-                            </Link>
-                            <span className="endpoint-url">{endpoint.url}</span>
-                          </td>
-                          <td>
-                            <span className={`badge ${status}`}>{endpoint.currentStatus || 'PENDING'}</span>
-                          </td>
-                          <td>{latestCheck?.statusCode || '-'}</td>
-                          <td>{latestCheck ? `${Math.round(latestCheck.latency)}ms` : '-'}</td>
-                          <td>{endpoint.interval}s</td>
-                          <td>{formatDate(endpoint.lastCheckedAt)}</td>
-                          <td>
-                            <div className="row-actions stacked">
-                              <RunCheckButton endpointId={endpoint.id} />
-                              <button
-                                className="secondary-button"
-                                onClick={() => setEditingEndpointId(endpoint.id)}
-                                type="button"
-                              >
-                                Edit
-                              </button>
-                              <EndpointActions endpointId={endpoint.id} endpointName={endpoint.name} />
-                            </div>
-                          </td>
-                        </tr>
-                        {editingEndpointId === endpoint.id ? (
-                          <tr key={`${endpoint.id}-edit`}>
-                            <td colSpan={7}>
-                              <EndpointEditForm
-                                endpoint={endpoint}
-                                onCancel={() => setEditingEndpointId(null)}
-                                onSaved={() => {
-                                  setEditingEndpointId(null)
-                                  void loadEndpoints()
-                                }}
-                              />
-                            </td>
-                          </tr>
-                        ) : null}
-                      </Fragment>
-                    )
-                  })}
-                </tbody>
-              </table>
+          <div className="panel" id="new-monitor">
+            <div className="panel-header">
+              <div>
+                <h2>New Monitor</h2>
+                <p>Create a monitor and schedule its first checks automatically</p>
+              </div>
             </div>
-          )}
-        </div>
-      </section>
-    </>
+            <EndpointForm />
+          </div>
+        </section>
+      </div>
+    </div>
   )
 }
