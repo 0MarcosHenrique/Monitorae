@@ -89,6 +89,39 @@ function formatDate(value: string | null) {
   }).format(new Date(value))
 }
 
+function formatTime(value: string) {
+  return new Intl.DateTimeFormat('en', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
+function getPercentile(values: number[], percentile: number) {
+  if (values.length === 0) {
+    return 0
+  }
+
+  const sorted = [...values].sort((a, b) => a - b)
+  const index = Math.min(sorted.length - 1, Math.ceil((percentile / 100) * sorted.length) - 1)
+
+  return sorted[index]
+}
+
+function formatIncidentDuration(seconds: number | null) {
+  if (!seconds) {
+    return 'Still open'
+  }
+
+  if (seconds < 60) {
+    return `${seconds}s`
+  }
+
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+
+  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`
+}
+
 export default async function EndpointDetail({
   params,
 }: {
@@ -112,6 +145,12 @@ export default async function EndpointDetail({
 
   const latestChecks = endpoint.healthChecks.slice(0, 12).reverse()
   const maxLatency = Math.max(...latestChecks.map((check) => check.latency), 1)
+  const latencies = endpoint.healthChecks.map((check) => check.latency)
+  const averageLatency =
+    latencies.length > 0 ? Math.round(latencies.reduce((sum, latency) => sum + latency, 0) / latencies.length) : 0
+  const p95Latency = Math.round(getPercentile(latencies, 95))
+  const failureCount = endpoint.healthChecks.filter((check) => !check.isUp).length
+  const latestCheck = endpoint.healthChecks[0]
   const uptime =
     endpoint.healthChecks.length > 0
       ? Math.round((endpoint.healthChecks.filter((check) => check.isUp).length / endpoint.healthChecks.length) * 100)
@@ -136,42 +175,65 @@ export default async function EndpointDetail({
         <section className="metric-grid">
           <div className="metric">
             <span>Status</span>
-            <strong>{endpoint.currentStatus || 'PENDING'}</strong>
+            <strong className={`status-text ${(endpoint.currentStatus || 'PENDING').toLowerCase()}`}>
+              {endpoint.currentStatus || 'PENDING'}
+            </strong>
           </div>
           <div className="metric">
-            <span>Uptime</span>
+            <span>Uptime from recent checks</span>
             <strong>{uptime}%</strong>
           </div>
           <div className="metric">
-            <span>Interval</span>
-            <strong>{endpoint.interval}s</strong>
+            <span>Average latency</span>
+            <strong>{averageLatency}ms</strong>
           </div>
           <div className="metric">
-            <span>Last check</span>
-            <strong className="small-metric">{formatDate(endpoint.lastCheckedAt)}</strong>
+            <span>P95 latency</span>
+            <strong>{p95Latency}ms</strong>
           </div>
         </section>
 
         <section className="panel">
           <div className="panel-header">
             <div>
-              <h2>Latency</h2>
-              <p>Last {latestChecks.length} checks</p>
+              <h2>Latency trend</h2>
+              <p>Last {latestChecks.length} checks, scaled against {Math.round(maxLatency)}ms max</p>
+            </div>
+            <div className="chart-summary">
+              <span>{failureCount} failed</span>
+              <span>{endpoint.interval}s interval</span>
+              <span>{endpoint.timeout}ms timeout</span>
             </div>
           </div>
-          <div className="latency-chart">
+          <div className="latency-chart" aria-label="Recent latency chart">
             {latestChecks.length === 0 ? (
               <div className="empty-state">No checks yet.</div>
             ) : latestChecks.map((check) => (
-              <div className="latency-bar-wrap" key={check.id} title={`${Math.round(check.latency)}ms`}>
+              <div
+                className="latency-bar-wrap"
+                key={check.id}
+                title={`${Math.round(check.latency)}ms at ${formatTime(check.checkedAt)}`}
+              >
                 <div
                   className={`latency-bar ${check.isUp ? 'up' : 'down'}`}
                   style={{ height: `${Math.max((check.latency / maxLatency) * 100, 8)}%` }}
                 />
-                <span>{Math.round(check.latency)}</span>
+                <span>{Math.round(check.latency)}ms</span>
+                <small>{formatTime(check.checkedAt)}</small>
               </div>
             ))}
           </div>
+          {latestChecks.length > 0 ? (
+            <div className="status-timeline" aria-label="Recent status timeline">
+              {latestChecks.map((check) => (
+                <span
+                  className={check.isUp ? 'up' : 'down'}
+                  key={`${check.id}-status`}
+                  title={`${check.isUp ? 'Up' : 'Down'} - ${formatDate(check.checkedAt)}`}
+                />
+              ))}
+            </div>
+          ) : null}
         </section>
 
         <section className="detail-grid">
@@ -179,13 +241,18 @@ export default async function EndpointDetail({
             <div className="panel-header">
               <div>
                 <h2>Recent checks</h2>
-                <p>Status code, latency and error message</p>
+                <p>Latest result: {latestCheck ? `${Math.round(latestCheck.latency)}ms` : 'not checked yet'}</p>
               </div>
             </div>
             <div className="list-panel">
               {endpoint.healthChecks.length === 0 ? <p>No checks yet.</p> : endpoint.healthChecks.map((check) => (
                 <div className="list-row" key={check.id}>
-                  <strong>{check.statusCode || 'FAILED'} - {Math.round(check.latency)}ms</strong>
+                  <div className="row-heading">
+                    <strong>{check.statusCode || 'FAILED'} - {Math.round(check.latency)}ms</strong>
+                    <span className={`mini-badge ${check.isUp ? 'up' : 'down'}`}>
+                      {check.isUp ? 'UP' : 'DOWN'}
+                    </span>
+                  </div>
                   <span>{formatDate(check.checkedAt)}</span>
                   {check.errorMessage ? <p>{check.errorMessage}</p> : null}
                 </div>
@@ -203,7 +270,12 @@ export default async function EndpointDetail({
             <div className="list-panel">
               {endpoint.alerts.length === 0 ? <p>No alerts yet.</p> : endpoint.alerts.map((alert) => (
                 <div className="list-row" key={alert.id}>
-                  <strong>{alert.type} via {alert.channel}</strong>
+                  <div className="row-heading">
+                    <strong>{alert.type} via {alert.channel}</strong>
+                    <span className={`mini-badge ${alert.sent ? 'up' : 'pending'}`}>
+                      {alert.sent ? 'SENT' : 'PENDING'}
+                    </span>
+                  </div>
                   <span>{alert.sent ? 'Sent' : 'Pending'} - {formatDate(alert.createdAt)}</span>
                   <p>{alert.message}</p>
                 </div>
@@ -222,11 +294,13 @@ export default async function EndpointDetail({
           <div className="list-panel">
             {endpoint.incidents.length === 0 ? <p>No incidents yet.</p> : endpoint.incidents.map((incident) => (
               <div className="list-row" key={incident.id}>
-                <strong>{incident.resolvedAt ? 'Resolved' : 'Open'} incident</strong>
-                <span>
-                  {formatDate(incident.startedAt)}
-                  {incident.duration ? ` - ${incident.duration}s` : ''}
-                </span>
+                <div className="row-heading">
+                  <strong>{incident.resolvedAt ? 'Resolved' : 'Open'} incident</strong>
+                  <span className={`mini-badge ${incident.resolvedAt ? 'up' : 'down'}`}>
+                    {incident.resolvedAt ? 'RESOLVED' : 'OPEN'}
+                  </span>
+                </div>
+                <span>{formatDate(incident.startedAt)} - {formatIncidentDuration(incident.duration)}</span>
                 {incident.errorMessage ? <p>{incident.errorMessage}</p> : null}
               </div>
             ))}
